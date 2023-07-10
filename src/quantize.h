@@ -32,5 +32,9 @@
 //     }
 // };
 
+void get_largest_eigenv(const cov_matrix &covariance, double &largestEigenvalue, VectorXd &largestEigenvector);
+cov_matrix calculate_covariance_matrix(const MatrixXd &data);
 Pixel find_closest_pixel_value(const Pixel &targetColor, const PixelMatrix &colorPalette);
+int find_cutting_point_index(const VectorXd &sortedPcaScores);
+vector<PixelMatrix> lda_partition(const VectorXd pcaScores, const PixelMatrix pixels);
 void quantize(PixelMatrix &originalImage, const Options &options);

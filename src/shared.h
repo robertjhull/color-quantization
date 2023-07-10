@@ -7,6 +7,7 @@
 
 #define PixelMatrix Eigen::MatrixXd
 #define Pixel Eigen::RowVectorXd
+#define cov_matrix Eigen::Matrix3d
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60

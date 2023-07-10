@@ -16,39 +16,121 @@ using namespace std;
 using namespace Eigen;
 using namespace chrono;
 
-VectorXd pca(const PixelMatrix &rgbMatrix)
+cov_matrix calculate_covariance_matrix(const MatrixXd &data)
 {
-    cout << "Performing Principal Component Analysis...";
-    PixelMatrix data = rgbMatrix;
+    cov_matrix covariance;
+    MatrixXd mat = data;
 
-    // Center the data by subtracting the mean of each column.
-    VectorXd mean = data.colwise().mean();
-    data.rowwise() -= mean.transpose();
+    mat.rowwise() -= data.colwise().mean();
 
-    EigenSolver<PixelMatrix> solver(data.transpose() * data);
+    covariance = (mat.transpose() * mat) / static_cast<double>(data.rows() - 1);
+
+    return covariance;
+}
+
+void get_largest_eigenv(const cov_matrix &covariance, double &largestEigenvalue, VectorXd &largestEigenvector)
+{
+    int index;
+    EigenSolver<PixelMatrix> solver(covariance, true);
     MatrixXd eigenVectors = solver.eigenvectors().real();
     VectorXd eigenValues = solver.eigenvalues().real();
 
-    // Sort eigenvalues in descending order.
-    vector<int> sortedIndices{0, 1, 2};
-    sort(sortedIndices.begin(), sortedIndices.end(),
-         [&eigenValues](int i, int j)
-         { return eigenValues(i) > eigenValues(j); });
+    largestEigenvalue = eigenValues.maxCoeff(&index);
+    largestEigenvector = eigenVectors.col(index);
+}
 
-    // Use the first (largest) eigenvector to calculate PCA scores.
+VectorXd pca(const PixelMatrix &data)
+{
+    cout << "Performing Principal Component Analysis...";
+    cov_matrix covariance;
+    double largestEigenvalue;
+    VectorXd largestEigenvector;
+    VectorXd pcaScores;
+
+    covariance = calculate_covariance_matrix(data);
+
+    get_largest_eigenv(covariance, largestEigenvalue, largestEigenvector);
+
+    VectorXd vec = VectorXd::Constant(data.rows(), 1.0);
+    pcaScores = (data - (vec * data.colwise().mean())) * largestEigenvector;
+
     cout << " done." << endl;
-    return data * eigenVectors.col(sortedIndices[0]);
+    return pcaScores;
+}
+
+void test_print_first_three_rows_of_matrix(MatrixXd &data, string name)
+{
+    cout << endl
+         << "========== " << name << " =========" << endl;
+    for (unsigned i = 0; i < 3; i++)
+    {
+        cout << data.row(i)(0) << "    " << data.row(i)(1) << "    " << data.row(i)(2) << endl;
+    }
+    cout << "==================================" << endl
+         << endl;
+    ;
+}
+
+/*
+ * Find the optimal cutting point in a sorted list of PCA scores based on comparing maximum separability.
+ */
+int find_cutting_point_index(const VectorXd &sortedPcaScores)
+{
+    cout << "Locating optimal cutting point...";
+
+    unsigned index;
+    double point;
+    unsigned l = 0, r = sortedPcaScores.size();
+
+    /* Separability G(d) of point d* is defined as:
+     *
+     *     G(d) = w_1(d) * w_2(d) * (m_1(d) - m_2(d))^2
+     *
+     * Where w_1(d) and m_2(d) are the number of pixels having a PCA score less than or equal to d* and the
+     * mean of these scores, respectively. Similarly, w_2(d) and m_2(d) are the number of pixels having a PCA
+     * score greater than d* and the mean of these scores, respectively.
+     */
+    auto separability = [&sortedPcaScores](unsigned i)
+    {
+        int n_w1 = i + 1;
+        int n_w2 = sortedPcaScores.size() - n_w1;
+
+        double d_m1 = sortedPcaScores.head(n_w1).mean();
+        double d_m2 = sortedPcaScores.tail(n_w2).mean();
+
+        return n_w1 * n_w2 * pow(d_m1 - d_m2, 2);
+    };
+
+    while (l < r)
+    {
+        index = static_cast<unsigned>((r + l) / 2);
+
+        point = separability(index);
+
+        if (index < r && point < separability(index + 1))
+        {
+            l = index;
+            continue;
+        }
+
+        else if (index > l && point < separability(index - 1))
+        {
+            r = index;
+            continue;
+        }
+
+        else
+        {
+            cout << " done. [d*=" << point << " at Idx=" << index << "]" << endl;
+
+            return index;
+        }
+    }
 }
 
 vector<PixelMatrix> lda_partition(const VectorXd pcaScores, const PixelMatrix pixels)
 {
-    cout << "Calculating optimal cutting point..." << endl;
-
     vector<PixelMatrix> subsets;
-
-    unsigned cuttingPointIndex;
-    double maxSeparability = MIN_DOUBLE;
-    double optimalCuttingPoint = MIN_DOUBLE;
 
     // Sort the pixel indices by PCA score and use to slice into new matrix.
     vector<int> indices(pcaScores.size());
@@ -63,50 +145,7 @@ vector<PixelMatrix> lda_partition(const VectorXd pcaScores, const PixelMatrix pi
     sort(scores.begin(), scores.end()); // doesn't work on VectorXd, hence the conversion to vector and back
     copy(scores.begin(), scores.end(), sortedPcaScores.data());
 
-    /*
-    Find optimal cutting point d* based on maximum separability G(d). Maximum separability is defined as:
-
-          G(d) = w_1(d) * w_2(d) * (m_1(d) - m_2(d))^2
-
-    Where w_1(d) and m_2(d) are the number of pixels having a PCA score less than or equal to d* and the
-    mean of these scores, respectively. Similarly, w_2(d) and m_2(d) are the number of pixels having a PCA
-    score greater than d* and the mean of these scores, respectively.
-    */
-    for (unsigned i = 0; i < sortedPcaScores.size();)
-    {
-        double cuttingPoint = sortedPcaScores(i);
-
-        int lessThanOrEqual = i + 1;
-        int greaterThan = scores.size() - lessThanOrEqual;
-
-        if (lessThanOrEqual == 0 || greaterThan == 0)
-        {
-            i += static_cast<unsigned>(scores.size() * 0.0001);
-            continue;
-        }
-
-        double meanLessThanOrEqual = sortedPcaScores.head(lessThanOrEqual).mean();
-        double meanGreaterThan = sortedPcaScores.tail(greaterThan).mean();
-
-        double separability = lessThanOrEqual * greaterThan * pow(meanLessThanOrEqual - meanGreaterThan, 2);
-
-        if (separability > maxSeparability)
-        {
-            maxSeparability = separability;
-            optimalCuttingPoint = cuttingPoint;
-            cuttingPointIndex = i;
-        }
-
-        // Samples only part of the matrix to improve performance. Need to test this for accuracy.
-        // TODO: Control this dynamically.
-        i += static_cast<unsigned>(sortedPcaScores.size() * 0.0001);
-
-        printProgress(static_cast<double>(i) / static_cast<double>(sortedPcaScores.size() - 1));
-    }
-
-    cout << endl
-         << "Partitioning pixels around optimal cutting point " << optimalCuttingPoint << endl;
-
+    int cuttingPointIndex = find_cutting_point_index(sortedPcaScores);
     PixelMatrix pixelSubsetA = sortedPixels.topRows(cuttingPointIndex);
     PixelMatrix pixelSubsetB = sortedPixels.bottomRows(sortedPixels.rows() - cuttingPointIndex);
     subsets.emplace_back(pixelSubsetA);
@@ -221,14 +260,43 @@ void quantize(PixelMatrix &originalImage, const Options &options)
         if (safeguard > options.targetNumColors)
             break;
 
-        // Locate the largest current subset for partitioning.
-        sort(subsets.begin(), subsets.end(), [](const PixelMatrix a, const PixelMatrix b)
-             { return a.rows() > b.rows(); });
+        /*
+         * Determine the optimal subset for partitioning. This is determined by the following criteria:
+         *
+         * (i) A subset that forms a broader distribution takes priority over other subsets.
+         * (ii) A subset that contains a larger number of pixels takes priority over other subsets.
+         *
+         * This criteria also can be represented by the following equation:
+         *
+         *   optimal_subset = arg max (Ae * Ne)
+         *
+         * Where Ae is the largest eigenvalue of the covariance matrix of the subset, and Ne is the
+         * number of elements contained in the subset
+         */
+        int largestSubsetIndex = 0;
+        double largestValue = 0;
+        for (unsigned x = 0; x < subsets.size(); ++x)
+        {
+            double value;
+            cov_matrix cov = calculate_covariance_matrix(subsets[x]);
 
-        VectorXd pcaScores = pca(subsets[0]);
-        vector<PixelMatrix> partitions = lda_partition(pcaScores, subsets[0]);
+            EigenSolver<MatrixXd> solver(cov, true);
 
-        subsets.erase(subsets.begin());
+            VectorXd eigenvalues = solver.eigenvalues().real();
+
+            value = eigenvalues.maxCoeff() * subsets[x].rows();
+
+            if (value > largestValue)
+            {
+                largestSubsetIndex = x;
+                largestValue = value;
+            }
+        }
+
+        VectorXd pcaScores = pca(subsets[largestSubsetIndex]);
+        vector<PixelMatrix> partitions = lda_partition(pcaScores, subsets[largestSubsetIndex]);
+
+        subsets.erase(subsets.begin() + largestSubsetIndex);
         subsets.emplace_back(partitions[0]);
         subsets.emplace_back(partitions[1]);
 
