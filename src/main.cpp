@@ -1,26 +1,9 @@
-#include <iostream>
-#include <chrono>
-#include <stdexcept>
-#include <string>
-
-#include "lodepng.h"
 #include "shared.h"
 #include "image.h"
-#include "quantize.h"
+#include "quantization.h"
 #include "dither.h"
 
 using namespace std;
-
-// void displayHelpMessages()
-// {
-//     cout << "Usage: main.exe [options] file\n"
-//             "Options:\n"
-//             "-h or --help              Display this information.\n"
-//             "--target-help             Display target specific command line options.\n"
-//             "-v or --version           Display program version information.\n"
-//             "--palettes                Display list of supported palettes.\n"
-//          << endl;
-// }
 
 void execute(Options &options)
 {
@@ -42,11 +25,10 @@ void execute(Options &options)
         unsigned width1, height1;
         vector<unsigned char> palette = import_png_image(options.paletteFileName.c_str(), width1, height1);
         options.targetPalette = convert_to_matrix(palette);
+
+        // floyd_steinberg_dither(pixelMatrix, options.targetPalette, options.width);
     }
-
     quantize(pixelMatrix, options);
-
-    // floydSteinbergDither(RgbMatrix, options.targetPalette, options.width);
 
     int error = write_rgb_image(options.outputFileName.c_str(), convert_to_vector(pixelMatrix), width, height);
 
@@ -70,7 +52,6 @@ int main(int argc, char *argv[])
 
     // Default settings
     unsigned numColors = 16;
-    bool logTime = true;
     string outputFilename = "output.png";
 
     // Process command line arguments
@@ -121,7 +102,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Options options{filename, numColors, logTime, outputFilename, paletteFileName};
+    Options options{filename, numColors, outputFilename, paletteFileName};
 
     if (!filename.empty())
         execute(options);

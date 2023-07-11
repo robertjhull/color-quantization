@@ -2,4 +2,4 @@
 
 #include "shared.h"
 
-void floyd_steinberg_dither(PixelMatrix &originalRgbMatrix, const PixelMatrix colorPalette, const unsigned width);
+void floyd_steinberg_dither(PixelMatrix &originalRgbMatrix, const Palette colorPalette, const unsigned width);

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Eigen/Core>
-#include <vector>
-
 #include "shared.h"
 
 std::vector<unsigned char> import_png_image(const char *filename, unsigned &width, unsigned &height);

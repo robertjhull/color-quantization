@@ -1,8 +1,4 @@
-#include <Eigen/Core>
-#include <iostream>
-
 #include "shared.h"
-#include "lodepng.h"
 #include "image.h"
 
 std::vector<unsigned char> import_png_image(const char *filename, unsigned &width, unsigned &height)

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <Eigen/Core>
-#include <string>
-#include <iostream>
-#include <iomanip>
+#include "pch/cqt_pc.h"
 
 #define PixelMatrix Eigen::MatrixXd
 #define Pixel Eigen::RowVectorXd
-#define cov_matrix Eigen::Matrix3d
+#define CovMatrix Eigen::Matrix3d
+#define Palette Eigen::MatrixXd
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
@@ -17,16 +15,23 @@
 using namespace std;
 using namespace Eigen;
 
-const string VERSION = "1.0";
+const string VERSION = "1.1";
 
-typedef struct Options
+typedef struct
+{
+    PixelMatrix data;
+    CovMatrix covariance;
+    double largestEigenvalue;
+    VectorXd largestEigenvector;
+} PixelSubset;
+
+typedef struct
 {
     const string filename;
     const unsigned targetNumColors;
-    const bool logTime;
     const string outputFileName;
     const string paletteFileName;
-    PixelMatrix targetPalette;
+    Palette targetPalette;
     unsigned width;
     unsigned height;
     bool dither;
@@ -41,7 +46,7 @@ void static inline printProgress(double percentage)
     fflush(stdout);
 }
 
-void static inline log_color_hex_values(PixelMatrix &colors)
+void static inline log_color_hex_values(Palette &colors)
 {
     cout << "Palette (Hex): ";
     for (int i = 0; i < colors.rows(); i++)

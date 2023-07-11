@@ -1,16 +1,11 @@
-#include <iostream>
-#include <Eigen/Core>
-#include <Eigen/Eigenvalues>
-#include <vector>
-
-#include "shared.h"
-#include "quantize.h"
+#include "quantization.h"
+#include "palette.h"
 #include "dither.h"
 
 using namespace std;
 using namespace Eigen;
 
-void floyd_steinberg_dither(PixelMatrix &originalRgbMatrix, const PixelMatrix colorPalette, const unsigned width)
+void floyd_steinberg_dither(PixelMatrix &originalRgbMatrix, const Palette colorPalette, const unsigned width)
 {
     cout << "Dithering... ";
 
