@@ -5,7 +5,7 @@
 #define PixelMatrix Eigen::MatrixXd
 #define Pixel Eigen::RowVectorXd
 #define CovMatrix Eigen::Matrix3d
-#define Palette Eigen::MatrixXd
+#define Palette vector<Pixel>
 
 #define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
 #define PBWIDTH 60
@@ -49,11 +49,11 @@ void static inline printProgress(double percentage)
 void static inline log_color_hex_values(Palette &colors)
 {
     cout << "Palette (Hex): ";
-    for (int i = 0; i < colors.rows(); i++)
+    for (unsigned i = 0; i < colors.size(); i++)
     {
-        int r = static_cast<int>(colors.row(i)(0));
-        int g = static_cast<int>(colors.row(i)(1));
-        int b = static_cast<int>(colors.row(i)(2));
+        int r = static_cast<int>(colors[i](0));
+        int g = static_cast<int>(colors[i](1));
+        int b = static_cast<int>(colors[i](2));
 
         // Convert RGB values to hex string
         std::stringstream ss;

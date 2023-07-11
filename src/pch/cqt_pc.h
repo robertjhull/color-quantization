@@ -10,6 +10,8 @@
 #include <vector>
 #include <numeric>
 #include <cstdio>
+#include <cmath>
+#include <map>
 
 #include <Eigen/Core>
 #include <Eigen/Dense>
