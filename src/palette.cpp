@@ -1,22 +1,25 @@
+#include "pch/cqt_pch.h"
+
 #include "palette.h"
 
-Palette get_reduced_palette(const vector<PixelSubset> &subsets)
+std::vector<Pixel> get_reduced_palette(const std::vector<PixelSubset> &subsets)
 {
-    cout << "Reducing palette...";
-    Palette reducedPalette(subsets.size(), 3);
+    std::cout << "\nReducing palette...";
+
+    std::vector<Pixel> palette;
 
     for (unsigned i = 0; i < subsets.size(); ++i)
     {
-        reducedPalette.row(i) = subsets[i].data.colwise().mean();
+        Pixel color = subsets[i].data.colwise().mean();
+        palette.emplace_back(color);
     }
 
-    cout << " done." << endl;
-    log_color_hex_values(reducedPalette);
+    std::cout << " done." << std::endl;
 
-    return reducedPalette;
+    return palette;
 }
 
-Pixel find_closest_pixel_value(const Pixel &targetColor, const Palette &colorPalette)
+Pixel find_closest_pixel_value(const Pixel &targetColor, const std::vector<Pixel> &colorPalette)
 {
     int closestIndex = 0;
     double minDistance = MAX_DOUBLE;
@@ -30,9 +33,9 @@ Pixel find_closest_pixel_value(const Pixel &targetColor, const Palette &colorPal
         return sqrt((dr * dr) + (dg * dg) + (db * db));
     };
 
-    for (unsigned i = 0; i < colorPalette.rows(); ++i)
+    for (unsigned i = 0; i < colorPalette.size(); ++i)
     {
-        double distance = calculateDistance(targetColor, colorPalette.row(i));
+        double distance = calculateDistance(targetColor, colorPalette[i]);
         if (distance < minDistance)
         {
             minDistance = distance;
@@ -40,10 +43,10 @@ Pixel find_closest_pixel_value(const Pixel &targetColor, const Palette &colorPal
         }
     }
 
-    return colorPalette.row(closestIndex);
+    return colorPalette[closestIndex];
 }
 
-bool color_has_been_used(const Pixel &targetColor, const vector<Pixel> colors_used)
+bool color_has_been_used(const Pixel &targetColor, const std::vector<Pixel> colors_used)
 {
     auto iter = std::find_if(colors_used.begin(), colors_used.end(), [&targetColor](const Pixel &color)
                              { return color.isApprox(targetColor); });
@@ -51,21 +54,13 @@ bool color_has_been_used(const Pixel &targetColor, const vector<Pixel> colors_us
     return iter != colors_used.end();
 }
 
-void map_to_palette(PixelMatrix &originalImage, const Palette palette)
+void map_to_palette(MatrixRgb &originalImage, std::vector<Pixel> &palette)
 {
-    vector<Pixel> colors_used;
-    Pixel color = find_closest_pixel_value(originalImage.row(0), palette);
-    colors_used.emplace_back(color);
-
-    for (unsigned pixel = 0; pixel < originalImage.rows(); ++pixel)
+    for (Eigen::Index pixel = 0; pixel < originalImage.rows(); ++pixel)
     {
-        color = find_closest_pixel_value(originalImage.row(pixel), palette);
-
-        if (!color_has_been_used(color, colors_used))
-            colors_used.emplace_back(color);
-
-        originalImage.row(pixel) = color;
+        Pixel newColor = find_closest_pixel_value(originalImage.row(pixel), palette);
+        originalImage.row(pixel) = newColor;
     }
-
-    std::cout << colors_used.size() << " colors used out of palette of " << palette.rows() << endl;
 }
+
+// TODO: figure out the problem of mapping between palettes and using all colors
