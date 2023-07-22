@@ -10,7 +10,7 @@ TEST_CASE("Import .png and convert to Eigen Matrix", "[png_import]")
 {
     using Catch::Matchers::WithinAbs;
 
-    RgbMatrix mat;
+    MatrixRgb mat;
     unsigned width, height;
     std::string target_file_path = "../test/testimage.png";
 
@@ -45,7 +45,7 @@ TEST_CASE("Import .png and convert to Eigen Matrix", "[png_import]")
 
 TEST_CASE("Convert Eigen matrix to vector<unsigned char>", "[matrix_to_vector]")
 {
-    RgbMatrix m(7, 3);
+    MatrixRgb m(7, 3);
     m << 3, 1, 2,
         4, 5, 1,
         4, 9, 9,
@@ -56,15 +56,8 @@ TEST_CASE("Convert Eigen matrix to vector<unsigned char>", "[matrix_to_vector]")
 
     std::vector<unsigned char> v = to_char_vector(m);
 
-    CHECK(static_cast<double>(v[0]) == m.row(0)(0));
-    CHECK(static_cast<double>(v[1]) == m.row(0)(1));
-    CHECK(static_cast<double>(v[2]) == m.row(0)(2));
-    CHECK(static_cast<double>(v[3]) == m.row(1)(0));
-    CHECK(static_cast<double>(v[4]) == m.row(1)(1));
-    CHECK(static_cast<double>(v[5]) == m.row(1)(2));
-    CHECK(static_cast<double>(v[6]) == m.row(2)(0));
-    CHECK(static_cast<double>(v[7]) == m.row(2)(1));
-    CHECK(static_cast<double>(v[8]) == m.row(2)(2));
-    CHECK(static_cast<double>(v[9]) == m.row(3)(0));
-    CHECK(static_cast<double>(v[10]) == m.row(3)(1));
+    for (unsigned i = 0; i < v.size(); ++i)
+    {
+        CHECK(static_cast<double>(v[i]) == m.row(static_cast<int>(i / 3))(i % 3));
+    }
 }
