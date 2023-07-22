@@ -1,3 +1,5 @@
+#include "pch/cqt_pch.h"
+
 #include "shared.h"
 #include "dither.h"
 #include "quantization.h"
@@ -6,18 +8,14 @@
 
 // #define NDEBUG
 
-using namespace std;
-using namespace Eigen;
-using namespace chrono;
-
 /*
  * Calculates the variance-covariance matrix from the given pixel data. This is then used to determine
  * eigenvalues and eigenvectors of the given data.
  */
-CovMatrix calculate_covariance_matrix(const MatrixXd &data)
+CovMatrix calculate_covariance_matrix(const Eigen::MatrixXd &data)
 {
     CovMatrix covariance;
-    MatrixXd mat = data;
+    Eigen::MatrixXd mat = data;
 
     mat.rowwise() -= data.colwise().mean();
 
@@ -29,12 +27,12 @@ CovMatrix calculate_covariance_matrix(const MatrixXd &data)
 /*
  * Calculates the first (largest) eigenvalue and corresponding eigenvalue from a given covariance matrix.
  */
-void get_largest_eigenv(const CovMatrix &covariance, double &largestEigenvalue, VectorXd &largestEigenvector)
+void get_largest_eigenv(const CovMatrix &covariance, double &largestEigenvalue, Eigen::VectorXd &largestEigenvector)
 {
     int index;
-    EigenSolver<PixelMatrix> solver(covariance, true);
-    MatrixXd eigenVectors = solver.eigenvectors().real();
-    VectorXd eigenValues = solver.eigenvalues().real();
+    Eigen::EigenSolver<CovMatrix> solver(covariance, true);
+    Eigen::MatrixXd eigenVectors = solver.eigenvectors().real();
+    Eigen::VectorXd eigenValues = solver.eigenvalues().real();
 
     largestEigenvalue = eigenValues.maxCoeff(&index);
     largestEigenvector = eigenVectors.col(index);
@@ -50,19 +48,17 @@ void get_largest_eigenv(const CovMatrix &covariance, double &largestEigenvalue, 
  * N-dimensional column vector with all elements initialized to 1.0, and V is the eigenvector corresponding
  * to the largest eigenvalue.
  */
-VectorXd calculate_pca_scores(const PixelSubset &targetSubset)
+Eigen::VectorXd calculate_pca_scores(const PixelSubset &targetSubset)
 {
-    VectorXd vec = VectorXd::Constant(targetSubset.data.rows(), 1.0);
+    Eigen::VectorXd vec = Eigen::VectorXd::Constant(targetSubset.data.rows(), 1.0);
     return (targetSubset.data - (vec * targetSubset.data.colwise().mean())) * targetSubset.largestEigenvector;
 }
 
 /*
  * Find the optimal cutting point in a sorted list of PCA scores based on comparing maximum separability.
  */
-int find_cutting_point_index(const VectorXd &sortedPcaScores)
+int find_cutting_point_index(const Eigen::VectorXd &sortedPcaScores)
 {
-    cout << "Locating optimal cutting point...";
-
     unsigned index;
     double point;
     unsigned l = 0, r = sortedPcaScores.size();
@@ -112,25 +108,27 @@ int find_cutting_point_index(const VectorXd &sortedPcaScores)
 
         else
         {
-            cout << " done. [d*=" << point << " at Idx=" << index << "]" << endl;
             return index;
         }
     }
+
+    return 0;
 }
 
-void sort_data_by_pca_score(PixelMatrix &pixels, VectorXd pcaScores, PixelMatrix &sortedPixels, VectorXd &sortedPcaScores)
+// TODO: cleanup
+void sort_data_by_pca_score(MatrixRgb &pixels, Eigen::VectorXd pcaScores, MatrixRgb &sortedPixels, Eigen::VectorXd &sortedPcaScores)
 {
     // Sort the pixel indices by PCA score and use to slice into new matrix.
-    vector<int> indices(pcaScores.size());
-    iota(indices.begin(), indices.end(), 0);
-    sort(indices.begin(), indices.end(), [&pcaScores](int i, int j)
-         { return pcaScores(i) < pcaScores(j); }); // doesn't work on MatrixXd, so we sort the indices instead
+    std::vector<int> indices(pcaScores.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::sort(indices.begin(), indices.end(), [&pcaScores](int i, int j)
+              { return pcaScores(i) < pcaScores(j); }); // doesn't work on MatrixXd, so we sort the indices instead
     sortedPixels = pixels(indices, Eigen::all);
 
     // Sorting PCA scores in ascending order.
-    vector<double> scores(pcaScores.data(), pcaScores.data() + pcaScores.size());
-    sort(scores.begin(), scores.end()); // doesn't work on VectorXd, hence the conversion to vector and back
-    copy(scores.begin(), scores.end(), sortedPcaScores.data());
+    std::vector<double> scores(pcaScores.data(), pcaScores.data() + pcaScores.size());
+    std::sort(scores.begin(), scores.end()); // doesn't work on VectorXd, hence the conversion to vector and back
+    std::copy(scores.begin(), scores.end(), sortedPcaScores.data());
 }
 
 /*
@@ -146,7 +144,7 @@ void sort_data_by_pca_score(PixelMatrix &pixels, VectorXd pcaScores, PixelMatrix
  * Where Ae is the largest eigenvalue of the covariance matrix of the subset, and Ne is the
  * number of elements contained in the subset
  */
-int determine_optimal_subset(vector<PixelSubset> &subsets)
+int determine_optimal_subset(std::vector<PixelSubset> &subsets)
 {
     double value;
     double largestValue = 0;
@@ -173,21 +171,23 @@ int determine_optimal_subset(vector<PixelSubset> &subsets)
 /*
  * Utilizes Linear Discriminant Analysis (LDA) to select an optimal subset of pixels out of the data and partition
  * it on the basis of the of the PCA scores that maximize the separability.
+ * TODO: cleanup
  */
-void partition(vector<PixelSubset> &subsets)
+void partition(std::vector<PixelSubset> &subsets)
 {
+    // idea: store indices of subsets and use those speed up palette mapping
     int subsetIndex = determine_optimal_subset(subsets);
 
-    VectorXd pcaScores = calculate_pca_scores(subsets[subsetIndex]);
+    Eigen::VectorXd pcaScores = calculate_pca_scores(subsets[subsetIndex]);
 
-    PixelMatrix sortedPixels;
-    PixelSubset pixelSubsetA, pixelSubsetB;
-    VectorXd sortedPcaScores(pcaScores.size());
+    MatrixRgb sortedPixels;
+    Eigen::VectorXd sortedPcaScores(pcaScores.size());
 
     sort_data_by_pca_score(subsets[subsetIndex].data, pcaScores, sortedPixels, sortedPcaScores);
 
     int cuttingPointIndex = find_cutting_point_index(pcaScores);
 
+    PixelSubset pixelSubsetA, pixelSubsetB;
     pixelSubsetA.data = sortedPixels.topRows(cuttingPointIndex);
     pixelSubsetB.data = sortedPixels.bottomRows(sortedPixels.rows() - cuttingPointIndex);
 
@@ -201,15 +201,15 @@ void partition(vector<PixelSubset> &subsets)
     Color quantization method based on principal component analysis and linear discriminant analysis
     for palette-based image generation.
 */
-void quantize(PixelMatrix &originalImage, const Options &options)
+void quantize(MatrixRgb &originalImage, const Options &options)
 {
-    vector<PixelSubset> subsets;
+    std::vector<PixelSubset> subsets;
 
     LOG_INFO(options, (FILENAME | DIMENSIONS | TARGET_NCOLORS | TARGET_PALETTE));
 
 #ifdef LOG_TIME
-    chrono::_V2::system_clock::time_point start, stop;
-    start = chrono::high_resolution_clock::now();
+    std::chrono::_V2::system_clock::time_point start, stop;
+    start = std::chrono::high_resolution_clock::now();
 #endif
 
     // Initialize the vector for holding matrix subsets with the original matrix as the first element.
@@ -227,26 +227,24 @@ void quantize(PixelMatrix &originalImage, const Options &options)
 
         partition(subsets);
 
-        cout << subsets.size() << " subsets partitioned out of " << options.targetNumColors << endl;
+        printProgress("Partitioning", subsets.size(), options.targetNumColors);
 
         safeguard++;
     }
 
     // Get the reduced color palette from the partitioned subsets.
-    Palette reducedPalette = get_reduced_palette(subsets);
+    std::vector<Pixel> palette = get_reduced_palette(subsets);
 
-    assert(reducedPalette.rows() == options.targetNumColors && "Reduced palette size should match the target number of colors!");
-
-    map_to_palette(originalImage, reducedPalette);
+    map_to_palette(originalImage, palette);
 
 // OPTIONAL LOGGING
 #ifndef LOG_TIME
-    cout << "Finished." << endl;
+    std::cout << "Finished." << std::endl;
 #endif
 #ifdef LOG_TIME
     stop = chrono::high_resolution_clock::now();
     // Print execution time in seconds
-    auto duration = chrono::duration_cast<chrono::seconds>(stop - start);
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
     std::cout << "Finished color quantization to " << options.targetNumColors << " colors finished in " << duration.count() << " seconds." << std::endl;
 #endif
 }

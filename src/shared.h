@@ -1,37 +1,49 @@
 #pragma once
 
-#include "pch/cqt_pc.h"
+#include "pch/cqt_pch.h"
 
-#define PixelMatrix Eigen::MatrixXd
-#define Pixel Eigen::RowVectorXd
-#define CovMatrix Eigen::Matrix3d
-#define Palette vector<Pixel>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
 
-#define PBSTR "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+#define PBSTR "------------------------------------------------------------"
 #define PBWIDTH 60
 #define MAX_DOUBLE 1.79769e+308
 #define MIN_DOUBLE 2.22507e-308
 
-using namespace std;
-using namespace Eigen;
+typedef Eigen::MatrixXd MatrixRgb;
+typedef Eigen::RowVectorXd Pixel;
+typedef Eigen::Matrix3d CovMatrix;
+typedef Eigen::Matrix<unsigned char, Eigen::Dynamic, 3, Eigen::RowMajor> MatrixXuc;
 
-const string VERSION = "1.1";
+struct PixelEqual
+{
+    bool operator()(const Pixel &p1, const Pixel &p2) const
+    {
+        return (std::fabs(p1(0) - p2(0)) < 0.1 && std::fabs(p1(1) - p2(1)) < 0.1 && std::fabs(p1(2) - p2(2)) < 0.1);
+    }
+};
+
+typedef std::map<int, Pixel> ColorMap;
+
+const std::string VERSION = "1.1";
 
 typedef struct
 {
-    PixelMatrix data;
+    MatrixRgb data;
     CovMatrix covariance;
     double largestEigenvalue;
-    VectorXd largestEigenvector;
+    Eigen::VectorXd largestEigenvector;
+    std::vector<int> indices;
 } PixelSubset;
 
 typedef struct
 {
-    const string filename;
+    const std::string filename;
     const unsigned targetNumColors;
-    const string outputFileName;
-    const string paletteFileName;
-    Palette targetPalette;
+    const std::string outputFileName;
+    const std::string paletteFileName;
+    const std::vector<Pixel> targetPalette;
     unsigned width;
     unsigned height;
     bool dither;
@@ -46,9 +58,18 @@ void static inline printProgress(double percentage)
     fflush(stdout);
 }
 
-void static inline log_color_hex_values(Palette &colors)
+void static inline printProgress(const char *action, int completed, int total)
 {
-    cout << "Palette (Hex): ";
+    double percentage = static_cast<double>(completed) / static_cast<double>(total);
+    int lpad = static_cast<int>(percentage * static_cast<double>(PBWIDTH));
+    int rpad = PBWIDTH - lpad;
+    printf("\r%s: %3d / %3d [%.*s%*s]", action, completed, total, lpad, PBSTR, rpad, "");
+    fflush(stdout);
+}
+
+void static inline log_color_hex_values(std::vector<Pixel> &colors)
+{
+    std::cout << "Palette (Hex): ";
     for (unsigned i = 0; i < colors.size(); i++)
     {
         int r = static_cast<int>(colors[i](0));
@@ -64,5 +85,5 @@ void static inline log_color_hex_values(Palette &colors)
 
         std::cout << "#" << ss.str() << " ";
     }
-    cout << endl;
+    std::cout << std::endl;
 }

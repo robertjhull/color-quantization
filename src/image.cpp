@@ -5,7 +5,7 @@
 
 // Flatten the image by concatenating the RGB values of each pixel row-wise, resulting in
 // a matrix where each row represents a pixel and each column represents a color channel.
-RgbMatrix to_matrix(std::vector<unsigned char> rgbImage)
+MatrixRgb to_matrix(std::vector<unsigned char> rgbImage)
 {
     const int rows = rgbImage.size() / 3;
     const int cols = 3;
@@ -15,7 +15,7 @@ RgbMatrix to_matrix(std::vector<unsigned char> rgbImage)
     return result.cast<double>();
 }
 
-RgbMatrix import_png_as_matrix(const char *filename, unsigned &width, unsigned &height)
+MatrixRgb import_png_as_matrix(const char *filename, unsigned &width, unsigned &height)
 {
     std::vector<unsigned char> png;
     std::vector<unsigned char> image; // the raw pixels
@@ -39,23 +39,18 @@ RgbMatrix import_png_as_matrix(const char *filename, unsigned &width, unsigned &
     return to_matrix(image);
 }
 
-// TODO: now working, clean up
-std::vector<unsigned char> to_char_vector(RgbMatrix &rgbMatrix)
+std::vector<unsigned char> to_char_vector(MatrixRgb &matrixRgb)
 {
-    // Map the data from Eigen matrix to a std::vector
-    MatrixXuc mappedMatrix = rgbMatrix.cast<unsigned char>();
-
-    // Create a std::vector<unsigned char> and copy the data from the Eigen matrix
+    MatrixXuc mappedMatrix = matrixRgb.cast<unsigned char>();
     std::vector<unsigned char> result(mappedMatrix.data(), mappedMatrix.data() + mappedMatrix.size());
-
     return result;
 }
 
-int write_image_to_file(const char *filename, RgbMatrix &rgbMatrix, unsigned width, unsigned height)
+int write_image_to_file(const char *filename, MatrixRgb &matrixRgb, unsigned width, unsigned height)
 {
-    assert(rgbMatrix.rows() == width * height && "Image dimensions do not match!");
+    assert(matrixRgb.rows() == width * height && "Image dimensions do not match!");
 
-    unsigned error = lodepng::encode(filename, to_char_vector(rgbMatrix), width, height, LCT_RGB);
+    unsigned error = lodepng::encode(filename, to_char_vector(matrixRgb), width, height, LCT_RGB);
 
     if (error)
     {

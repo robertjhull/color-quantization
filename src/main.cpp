@@ -1,3 +1,5 @@
+#include "pch/cqt_pch.h"
+
 #include "shared.h"
 #include "image.h"
 #include "quantization.h"
@@ -13,29 +15,11 @@ void execute(Options &options)
         return;
     }
 
-    unsigned width, height;
-    vector<unsigned char> image = import_png_image(options.filename.c_str(), width, height);
-    options.width = width;
-    options.height = height;
+    MatrixRgb matrixRgb = import_png_as_matrix(options.filename.c_str(), options.width, options.height);
 
-    PixelMatrix pixelMatrix = convert_to_matrix(image);
+    quantize(matrixRgb, options);
 
-    if (!options.paletteFileName.empty())
-    {
-        unsigned width1, height1;
-        vector<unsigned char> palette = import_png_image(options.paletteFileName.c_str(), width1, height1);
-        options.targetPalette = convert_to_matrix(palette);
-
-        // floyd_steinberg_dither(pixelMatrix, options.targetPalette, options.width);
-    }
-    quantize(pixelMatrix, options);
-
-    int error = write_rgb_image(options.outputFileName.c_str(), convert_to_vector(pixelMatrix), width, height);
-
-    if (error)
-    {
-        std::cout << options.outputFileName << " encoding error: " << lodepng_error_text(error) << std::endl;
-    }
+    write_image_to_file(options.outputFileName.c_str(), matrixRgb, options.width, options.height);
 }
 
 int main(int argc, char *argv[])
