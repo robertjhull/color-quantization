@@ -26,7 +26,7 @@ TEST_CASE("Find closest pixel value", "[closest_pixel]")
     }
 }
 
-TEST_CASE("Calculate reduced palette and convert to color map", "[reduce_palette]")
+TEST_CASE("Get reduced palette", "[reduce_palette]")
 {
     std::vector<PixelSubset> v(4);
     PixelSubset s1, s2, s3, s4;

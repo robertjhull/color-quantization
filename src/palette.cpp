@@ -46,14 +46,6 @@ Pixel find_closest_pixel_value(const Pixel &targetColor, const std::vector<Pixel
     return colorPalette[closestIndex];
 }
 
-bool color_has_been_used(const Pixel &targetColor, const std::vector<Pixel> colors_used)
-{
-    auto iter = std::find_if(colors_used.begin(), colors_used.end(), [&targetColor](const Pixel &color)
-                             { return color.isApprox(targetColor); });
-
-    return iter != colors_used.end();
-}
-
 void map_to_palette(MatrixRgb &originalImage, std::vector<Pixel> &palette)
 {
     for (Eigen::Index pixel = 0; pixel < originalImage.rows(); ++pixel)

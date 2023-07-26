@@ -16,16 +16,6 @@ typedef Eigen::RowVectorXd Pixel;
 typedef Eigen::Matrix3d CovMatrix;
 typedef Eigen::Matrix<unsigned char, Eigen::Dynamic, 3, Eigen::RowMajor> MatrixXuc;
 
-struct PixelEqual
-{
-    bool operator()(const Pixel &p1, const Pixel &p2) const
-    {
-        return (std::fabs(p1(0) - p2(0)) < 0.1 && std::fabs(p1(1) - p2(1)) < 0.1 && std::fabs(p1(2) - p2(2)) < 0.1);
-    }
-};
-
-typedef std::map<int, Pixel> ColorMap;
-
 const std::string VERSION = "1.1";
 
 typedef struct
