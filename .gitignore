@@ -1,3 +1,11 @@
+# CMake build files
+build/
+/test/build/
+
+# Ignore editor backup files
+*~
+*.swp
+
 # Prerequisites
 *.d
 
@@ -25,17 +33,15 @@
 *.la
 *.a
 *.lib
-
-# Executables
 *.exe
 *.out
 *.app
+*.dSYM/
 
-# Images
 *.png
-
-# Docs
 *.pdf
+*.html
 
-# VS Code
 .vscode/
+subprojects/
+extern/
