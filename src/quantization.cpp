@@ -205,7 +205,7 @@ void quantize(MatrixRgb &originalImage, const Options &options)
 {
     std::vector<PixelSubset> subsets;
 
-    LOG_INFO(options, (FILENAME | DIMENSIONS | TARGET_NCOLORS | TARGET_PALETTE));
+    LogInfo(options, (FILENAME | DIMENSIONS | TARGET_NCOLORS | TARGET_PALETTE));
 
 #ifdef LOG_TIME
     std::chrono::_V2::system_clock::time_point start, stop;

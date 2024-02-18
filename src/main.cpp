@@ -24,6 +24,28 @@ void execute(Options &options)
 
 int main(int argc, char *argv[])
 {
+    if (argc != 3)
+    {
+        std::cerr << "Usage: cq.exe <path-to-image.png> <number-of-colors>\n";
+        return 1;
+    }
+
+    std::string imagePath = argv[1];
+    int numberOfColors = std::atoi(argv[2]);
+
+    if (numberOfColors <= 0)
+    {
+        std::cerr << "Invalid number of colors. It must be a positive integer.\n";
+        return 1;
+    }
+
+    
+
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
     // Check if there are any command line arguments
     if (argc == 1)
     {
